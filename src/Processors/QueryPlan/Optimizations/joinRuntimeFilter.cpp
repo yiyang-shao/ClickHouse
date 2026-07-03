@@ -453,9 +453,9 @@ bool tryAddJoinRuntimeFilter(QueryPlan::Node & node, QueryPlan::Nodes & nodes, c
                 build_filter_node = new_build_filter_node;
             }
 
-            /// Record a descriptor so HashJoin can replace the Set/BloomFilter above with a
-            /// SharedFixedHashTableRuntimeFilter when its build side ends up as a FixedHashMap;
-            /// otherwise the Set/BloomFilter stays as fallback. Carry the rendezvous key (`id.key`),
+            /// Record a descriptor so `HashJoin` can replace the `Set`/`BloomFilter` above with a
+            /// `SharedFixedHashTableRuntimeFilterImpl` when its build side ends up as a `FixedHashMap`;
+            /// otherwise the `Set`/`BloomFilter` stays active. Carry the rendezvous key (`id.key`),
             /// NOT the stable display name: the filter is registered in the lookup under that key, so
             /// `HashJoin::publishSharedRuntimeFilters` must find/replace it under the same key.
             if (join_step->getJoinSettings().join_runtime_filter_from_fixed_hash_table

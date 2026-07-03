@@ -42,15 +42,19 @@ BuildRuntimeFilterTransform::BuildRuntimeFilterTransform(
     if (!filter_column_target_type->equals(*filter_column_original_type))
         cast_to_target_type = createInternalCast(filter_column, filter_column_target_type, CastType::nonAccurate, {}, nullptr);
 
+    const RuntimeFilterConfig runtime_filter_config{
+        filter_column_target_type,
+        pass_ratio_threshold_for_disabling_,
+        blocks_to_skip_before_reenabling_};
+
     if (allow_to_use_not_exact_filter_)
     {
-        if (ApproximateRuntimeFilter::isDataTypeSupported(filter_column_target_type))
+        if (AdaptiveSetRuntimeFilter::isDataTypeSupported(filter_column_target_type))
         {
-            built_filter = std::make_unique<ApproximateRuntimeFilter>(
+            built_filter = std::make_unique<RuntimeFilter>(
+                RuntimeFilter::approximate,
                 filters_to_merge_,
-                filter_column_target_type,
-                pass_ratio_threshold_for_disabling_,
-                blocks_to_skip_before_reenabling_,
+                runtime_filter_config,
                 bloom_filter_bytes_,
                 exact_values_limit_,
                 bloom_filter_hash_functions_,
@@ -58,22 +62,20 @@ BuildRuntimeFilterTransform::BuildRuntimeFilterTransform(
         }
         else
         {
-            built_filter = std::make_unique<ExactContainsRuntimeFilter>(
+            built_filter = std::make_unique<RuntimeFilter>(
+                RuntimeFilter::exact_contains,
                 filters_to_merge_,
-                filter_column_target_type,
-                pass_ratio_threshold_for_disabling_,
-                blocks_to_skip_before_reenabling_,
+                runtime_filter_config,
                 bloom_filter_bytes_,
                 exact_values_limit_);
         }
     }
     else
     {
-        built_filter = std::make_unique<ExactNotContainsRuntimeFilter>(
+        built_filter = std::make_unique<RuntimeFilter>(
+            RuntimeFilter::exact_not_contains,
             filters_to_merge_,
-            filter_column_target_type,
-            pass_ratio_threshold_for_disabling_,
-            blocks_to_skip_before_reenabling_,
+            runtime_filter_config,
             bloom_filter_bytes_,
             exact_values_limit_);
     }
