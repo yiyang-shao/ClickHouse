@@ -2633,9 +2633,9 @@ void HashJoin::publishSharedRuntimeFilters()
             continue;
 
         auto filter = std::make_unique<RuntimeFilter>(
-            RuntimeFilter::shared_fixed_hash_table,
+            /*filters_to_merge_=*/0,
             runtime_filter_config,
-            probe_fn);
+            RuntimeFilter::SharedFixedHashTable(probe_fn));
         /// `replace` keeps the original registration's display name in the lookup, so stats stay legible.
         LOG_TRACE(getLogger("HashJoin"), "Published shared fixed-hash-table runtime filter under key '{}'", filter_key);
         lookup->replace(filter_key, std::move(filter));

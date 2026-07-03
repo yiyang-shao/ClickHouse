@@ -43,7 +43,6 @@ BuildRuntimeFilterTransform::BuildRuntimeFilterTransform(
         cast_to_target_type = createInternalCast(filter_column, filter_column_target_type, CastType::nonAccurate, {}, nullptr);
 
     const RuntimeFilterConfig runtime_filter_config{
-        filter_column_target_type,
         pass_ratio_threshold_for_disabling_,
         blocks_to_skip_before_reenabling_};
 
@@ -52,32 +51,35 @@ BuildRuntimeFilterTransform::BuildRuntimeFilterTransform(
         if (AdaptiveSetRuntimeFilter::isDataTypeSupported(filter_column_target_type))
         {
             built_filter = std::make_unique<RuntimeFilter>(
-                RuntimeFilter::approximate,
                 filters_to_merge_,
                 runtime_filter_config,
-                bloom_filter_bytes_,
-                exact_values_limit_,
-                bloom_filter_hash_functions_,
-                max_ratio_of_set_bits_in_bloom_filter_);
+                RuntimeFilter::Adaptive(
+                    filter_column_target_type,
+                    bloom_filter_bytes_,
+                    exact_values_limit_,
+                    bloom_filter_hash_functions_,
+                    max_ratio_of_set_bits_in_bloom_filter_));
         }
         else
         {
             built_filter = std::make_unique<RuntimeFilter>(
-                RuntimeFilter::exact_contains,
                 filters_to_merge_,
                 runtime_filter_config,
-                bloom_filter_bytes_,
-                exact_values_limit_);
+                RuntimeFilter::ExactContains(
+                    filter_column_target_type,
+                    bloom_filter_bytes_,
+                    exact_values_limit_));
         }
     }
     else
     {
         built_filter = std::make_unique<RuntimeFilter>(
-            RuntimeFilter::exact_not_contains,
             filters_to_merge_,
             runtime_filter_config,
-            bloom_filter_bytes_,
-            exact_values_limit_);
+            RuntimeFilter::ExactNotContains(
+                filter_column_target_type,
+                bloom_filter_bytes_,
+                exact_values_limit_));
     }
 }
 

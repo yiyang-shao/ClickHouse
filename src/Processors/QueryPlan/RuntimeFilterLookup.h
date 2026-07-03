@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -33,7 +34,6 @@ struct RuntimeFilterStats
 
 struct RuntimeFilterConfig
 {
-    const DataTypePtr filter_column_target_type;
     const Float64 pass_ratio_threshold_for_disabling = 0.7;
     const UInt64 blocks_to_skip_before_reenabling = 30;
 };
@@ -236,16 +236,6 @@ public:
     using Adaptive = AdaptiveSetRuntimeFilter;
     using SharedFixedHashTable = SharedFixedHashTableRuntimeFilterImpl;
 
-    struct ExactContainsTag {};
-    struct ExactNotContainsTag {};
-    struct AdaptiveTag {};
-    struct SharedFixedHashTableTag {};
-
-    static constexpr ExactContainsTag exact_contains{};
-    static constexpr ExactNotContainsTag exact_not_contains{};
-    static constexpr AdaptiveTag approximate{};
-    static constexpr SharedFixedHashTableTag shared_fixed_hash_table{};
-
 private:
     using Filter = std::variant<ExactContains, ExactNotContains, Adaptive, SharedFixedHashTable>;
 
@@ -262,64 +252,18 @@ private:
     }
 
 public:
+    template <typename FilterImpl>
     RuntimeFilter(
-        ExactContainsTag,
         size_t filters_to_merge_,
         RuntimeFilterConfig config_,
-        UInt64 bytes_limit_,
-        UInt64 exact_values_limit_)
+        FilterImpl && filter_)
         : RuntimeFilter(
-            config_,
+            std::move(config_),
             Data{
-                detail::RuntimeFilterBuildState(filters_to_merge_),
-                Filter(ExactContains(config_.filter_column_target_type, bytes_limit_, exact_values_limit_))})
-    {
-    }
-
-    RuntimeFilter(
-        ExactNotContainsTag,
-        size_t filters_to_merge_,
-        RuntimeFilterConfig config_,
-        UInt64 bytes_limit_,
-        UInt64 exact_values_limit_)
-        : RuntimeFilter(
-            config_,
-            Data{
-                detail::RuntimeFilterBuildState(filters_to_merge_),
-                Filter(ExactNotContains(config_.filter_column_target_type, bytes_limit_, exact_values_limit_))})
-    {
-    }
-
-    RuntimeFilter(
-        AdaptiveTag,
-        size_t filters_to_merge_,
-        RuntimeFilterConfig config_,
-        UInt64 bytes_limit_,
-        UInt64 exact_values_limit_,
-        UInt64 bloom_filter_hash_functions_,
-        Float64 max_ratio_of_set_bits_in_bloom_filter_)
-        : RuntimeFilter(
-            config_,
-            Data{
-                detail::RuntimeFilterBuildState(filters_to_merge_),
-                Filter(Adaptive(
-                    config_.filter_column_target_type,
-                    bytes_limit_,
-                    exact_values_limit_,
-                    bloom_filter_hash_functions_,
-                    max_ratio_of_set_bits_in_bloom_filter_))})
-    {
-    }
-
-    RuntimeFilter(
-        SharedFixedHashTableTag,
-        RuntimeFilterConfig config_,
-        SharedFixedHashTable::ProbeFn probe_fn_)
-        : RuntimeFilter(
-            config_,
-            Data{
-                detail::RuntimeFilterBuildState(0, true),
-                Filter(SharedFixedHashTable(std::move(probe_fn_)))})
+                detail::RuntimeFilterBuildState(
+                    std::decay_t<FilterImpl>::is_prebuilt ? 0 : filters_to_merge_,
+                    std::decay_t<FilterImpl>::is_prebuilt),
+                Filter(std::forward<FilterImpl>(filter_))})
     {
     }
 
