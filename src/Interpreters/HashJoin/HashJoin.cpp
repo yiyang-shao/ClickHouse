@@ -2607,14 +2607,15 @@ void HashJoin::publishSharedRuntimeFilters()
     if (!probe_fn)
         return;
 
-    /// Replace any Set/BloomFilter that BuildRuntimeFilterStep installed earlier. The descriptor's
-    /// first element is the rendezvous key (the same key `BuildRuntimeFilterTransform` registered the
-    /// filter under and the probe-side `__applyFilter` looks it up by), not the stable display name.
-    for (const auto & [filter_key, descr_build_key] : descriptors)
+    /// Replace any `Set`/`BloomFilter` that `BuildRuntimeFilterStep` installed earlier. The descriptor's
+    /// rendezvous key is the same key `BuildRuntimeFilterTransform` registered the filter under and the
+    /// probe-side `__applyFilter` looks it up by, not the stable display name.
+    for (const auto & descriptor : descriptors)
     {
-        if (descr_build_key != build_key_name)
+        if (descriptor.build_key_name != build_key_name)
             continue;
 
+        const auto & filter_key = descriptor.filter_key;
         auto existing = lookup->find(filter_key);
         if (!existing)
             continue;
@@ -2622,7 +2623,7 @@ void HashJoin::publishSharedRuntimeFilters()
         /// When common_type is wide (e.g. Int64 = UInt64 promotes to Int128), per-row wide-integer
         /// arithmetic on the probe side can be slower than the existing BloomFilter; skip.
         const auto & runtime_filter_config = existing->getConfig();
-        const auto target_type = removeNullable(runtime_filter_config.filter_column_target_type);
+        const auto target_type = removeNullable(descriptor.common_type);
         WhichDataType target_which(target_type);
         if (!target_type->isValueRepresentedByInteger()
             || target_which.isInt128() || target_which.isUInt128()
