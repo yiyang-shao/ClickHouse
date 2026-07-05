@@ -5,7 +5,6 @@ SET materialize_statistics_on_insert = 0; -- pin (randomized in CI): statistics 
 
 SET optimize_trivial_count_query = 1;
 SET query_plan_optimize_prewhere = 1;
-SET materialize_statistics_on_insert = 0;
 SET optimize_move_to_prewhere = 1;
 
 -- { echo }

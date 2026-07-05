@@ -5,7 +5,6 @@ SET explain_query_plan_default = 'legacy';
 SET materialize_statistics_on_insert = 0; -- pin (randomized in CI): statistics built on INSERT add a Statistics step to EXPLAIN
 
 -- { echo }
-SET materialize_statistics_on_insert = 0;
 
 DROP TABLE IF EXISTS t;
 CREATE TABLE t (x Int32) ENGINE = MergeTree PARTITION BY x ORDER BY tuple();
