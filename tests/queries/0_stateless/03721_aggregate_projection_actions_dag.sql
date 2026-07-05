@@ -1,8 +1,6 @@
 SET explain_query_plan_default = 'legacy';
--- Must precede the INSERT below: CI may inject materialize_statistics_on_insert, which
--- materializes the randomized auto-statistics at insert time, giving the optimizer real
--- cardinalities that reorder the join and change the EXPLAIN output.
-SET materialize_statistics_on_insert = 0;
+SET materialize_statistics_on_insert = 0; -- pin (randomized in CI): statistics built on INSERT change the plan
+SET query_plan_optimize_join_order_randomize = 0; -- Pinned because the test asserts on join plan/order
 CREATE TABLE test
 (
     `key` UInt64,
