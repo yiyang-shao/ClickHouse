@@ -1526,9 +1526,19 @@ class SettingsRandomizer:
         "short_circuit_function_evaluation_for_nulls_threshold": lambda: random.random() * 1.1,
         "automatic_parallel_replicas_mode": lambda: 2 if random.random() < 0.25 else 0,
         "temporary_files_buffer_size": lambda: random.randint(800 * 1024, 1200 * 1024),
-        # dpsize' - implements DPsize algorithm currently only for Inner joins. So it may not work in some tests.
-        # That is why we use it with fallback to 'greedy'.
-        "query_plan_optimize_join_order_algorithm": lambda: random.choice(['greedy', 'dpsize,greedy', 'greedy,dpsize']),
+        # JoinOrderAlgorithm is a multi-enum {greedy, dpsize, dpsub, dphyp} tried in order with
+        # fallback. dpsize/dphyp handle inner joins only and dpsub/dphyp can still bail on
+        # disconnected components, so every combination keeps `greedy` in the chain: exhausting the
+        # chain throws EXPERIMENTAL_FEATURE_ERROR (joinOrder.cpp), which would break any test with
+        # outer joins. Listing an algorithm first still exercises it — greedy only catches the
+        # cases it cannot plan.
+        "query_plan_optimize_join_order_algorithm": lambda: random.choice([
+            'greedy',
+            'dpsize,greedy', 'dpsub,greedy', 'dphyp,greedy',
+            'greedy,dpsize', 'greedy,dpsub', 'greedy,dphyp',
+            'dphyp,dpsize,greedy', 'dpsub,dphyp,greedy',
+        ]),
+        "query_plan_optimize_join_order_max_searched_plans": lambda: random.choice([0, 1, 10, 100, 1000, 100000]),
         "max_bytes_before_external_join": lambda: random.choice([0, 1000000000]),
         "grace_hash_join_initial_buckets": lambda: random.choice([1, 2, 4, 8]),
         "query_plan_optimize_join_order_randomize": lambda: 1 if random.random() < 0.1 else random.randint(2, 1_000_000),
