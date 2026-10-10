@@ -81,11 +81,12 @@ For AWS deployments, the Kubernetes API server can instead be reached privately 
 
 ### GCP private control-plane endpoint {#k8s-api-private-connection-gcp}
 
-For GCP deployments, the GKE cluster's IP-based control-plane endpoint can be disabled, so it is no longer reachable from the public internet. ClickHouse management services then reach the control plane over its DNS-based endpoint (`*.gke.goog`), which is authorized by the `container.clusters.connect` IAM permission on the service account ClickHouse impersonates in your project, rather than by a source-IP allow list.
+On GCP, ClickHouse management services reach the GKE control plane over its public IP endpoint by default. This endpoint can be disabled so the control plane is no longer reachable on a public IP address:
 
-- Access is governed entirely by cloud IAM in your project, so revoking that permission revokes the path.
-- The request terminates at Google's frontend rather than inside your VPC network, so review it as an access path into your control plane rather than as a network-private link.
-- ClickHouse engineer troubleshooting access continues to use Tailscale.
+- The control plane keeps its internal IP endpoint, reachable only from inside your VPC network, and its DNS-based endpoint (`*.gke.goog`), which is always enabled.
+- ClickHouse management services reach the control plane over the DNS-based endpoint. It is authorized by the `container.clusters.connect` IAM permission on the service account ClickHouse impersonates in your project, rather than by a source-IP allow list, so revoking that permission revokes the path. The request terminates at Google's frontend rather than inside your VPC network, so review it as an access path into your control plane rather than as a network-private link.
+- Deployment tooling, monitoring, and ClickHouse engineer troubleshooting access reach the internal IP endpoint over Tailscale. The Tailscale agents are deployed into the cluster during initial setup, so this mode can be enabled only after setup completes.
+- A VPC Service Controls perimeter that restricts `container.googleapis.com` also restricts the DNS-based endpoint. Add an ingress rule that admits ClickHouse's management identities; your ClickHouse team can provide them for your deployment.
 
 ### Azure Private Link {#k8s-api-private-connection-azure}
 
